@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: bank-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bankdb
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
