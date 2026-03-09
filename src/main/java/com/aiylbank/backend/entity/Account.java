@@ -5,7 +5,6 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -23,7 +22,9 @@ public class Account {
     private BigDecimal balance = BigDecimal.ZERO;
 
     @Column(name = "status", nullable = false)
-    private Boolean status = true;
+
+    @Enumerated(EnumType.STRING)
+    private AccountStatus status;
 
     @Version
     @Column(name = "version", nullable = false)
@@ -32,12 +33,6 @@ public class Account {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
-
-    @OneToMany(mappedBy = "sender", fetch = FetchType.LAZY)
-    private List<Transaction> sentTransactions;
-
-    @OneToMany(mappedBy = "receiver", fetch = FetchType.LAZY)
-    private List<Transaction> receivedTransactions;
 
     public Account() {
     }
@@ -66,11 +61,11 @@ public class Account {
         this.balance = balance;
     }
 
-    public Boolean getStatus() {
+    public AccountStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Boolean status) {
+    public void setStatus(AccountStatus status) {
         this.status = status;
     }
 
@@ -82,21 +77,6 @@ public class Account {
         return createdAt;
     }
 
-    public List<Transaction> getSentTransactions() {
-        return sentTransactions;
-    }
-
-    public void setSentTransactions(List<Transaction> sentTransactions) {
-        this.sentTransactions = sentTransactions;
-    }
-
-    public List<Transaction> getReceivedTransactions() {
-        return receivedTransactions;
-    }
-
-    public void setReceivedTransactions(List<Transaction> receivedTransactions) {
-        this.receivedTransactions = receivedTransactions;
-    }
 
     @Override
     public boolean equals(Object o) {
