@@ -54,8 +54,12 @@ public class TransferServiceImpl implements TransferService {
             throw new SelfTransferException("Невозможно выполнить перевод на собственный счет");
         }
 
-        if (!accountRepository.existsByAccountNo(senderAccountNumber) || !accountRepository.existsByAccountNo(receiverAccountNumber)) {
-            throw new AccountNotFoundException("Один из счетов не найден");
+        if (!accountRepository.existsByAccountNo(senderAccountNumber)) {
+            throw new AccountNotFoundException("Счёт отправителя не найден");
+        }
+        if (!accountRepository.existsByAccountNo(receiverAccountNumber)){
+            throw new AccountNotFoundException("ОСчёт получателя не найден");
+
         }
 
         return fundsTransferService.transferFunds(senderAccountNumber, receiverAccountNumber, createTransferDto.amount());

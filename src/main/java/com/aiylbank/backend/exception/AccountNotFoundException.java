@@ -1,6 +1,6 @@
 package com.aiylbank.backend.exception;
 
-public class AccountNotFoundException extends NotFoundException{
+public class AccountNotFoundException extends RuntimeException {
     public AccountNotFoundException() {
         super();
     }
