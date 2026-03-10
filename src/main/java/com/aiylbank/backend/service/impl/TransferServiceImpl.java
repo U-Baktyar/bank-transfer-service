@@ -4,12 +4,16 @@ import com.aiylbank.backend.dto.AccountStatementDto;
 import com.aiylbank.backend.dto.CreateTransferDto;
 import com.aiylbank.backend.dto.TransferResponseDto;
 import com.aiylbank.backend.entity.Transaction;
-import com.aiylbank.backend.exception.*;
+import com.aiylbank.backend.exception.AccountNotFoundException;
+import com.aiylbank.backend.exception.InvalidDateException;
+import com.aiylbank.backend.exception.SelfTransferException;
 import com.aiylbank.backend.mapper.TransferMapper;
 import com.aiylbank.backend.repository.AccountRepository;
 import com.aiylbank.backend.repository.TransactionRepository;
 import com.aiylbank.backend.service.TransferService;
 import com.aiylbank.backend.service.FundsTransferService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +26,8 @@ import java.time.*;
 
 @Service
 public class TransferServiceImpl implements TransferService {
+
+    private static final Logger log = LoggerFactory.getLogger(TransferServiceImpl.class);
 
     private static final LocalDate MIN_DATE = LocalDate.of(1900, 1, 1);
     private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Bishkek");
@@ -47,19 +53,23 @@ public class TransferServiceImpl implements TransferService {
     @Override
     @Transactional
     public TransferResponseDto execute(CreateTransferDto createTransferDto) {
+        log.info("Выполняем перевод DTO: {}", createTransferDto);
+
         String senderAccountNumber = createTransferDto.senderAccountNumber();
         String receiverAccountNumber = createTransferDto.receiverAccountNumber();
 
         if(senderAccountNumber.equals(receiverAccountNumber)){
+            log.warn("Попытка самоперевода с {} на {}", senderAccountNumber, receiverAccountNumber);
             throw new SelfTransferException("Невозможно выполнить перевод на собственный счет");
         }
 
         if (!accountRepository.existsByAccountNo(senderAccountNumber)) {
+            log.warn("Счёт отправителя {} не найден", senderAccountNumber);
             throw new AccountNotFoundException("Счёт отправителя не найден");
         }
         if (!accountRepository.existsByAccountNo(receiverAccountNumber)){
-            throw new AccountNotFoundException("ОСчёт получателя не найден");
-
+            log.warn("Счёт получателя {} не найден", receiverAccountNumber);
+            throw new AccountNotFoundException("Счёт получателя не найден");
         }
 
         return fundsTransferService.transferFunds(senderAccountNumber, receiverAccountNumber, createTransferDto.amount());
@@ -68,6 +78,8 @@ public class TransferServiceImpl implements TransferService {
     @Override
     @Transactional(readOnly = true)
     public AccountStatementDto getAccountStatement(String accountNumber, LocalDate from, LocalDate to, Integer page, Integer size){
+        log.info("Запрос выписки по счету {} с {} по {}, страница {}, размер {}", accountNumber, from, to, page, size);
+
 
         validateAccountAndDates(accountNumber, from, to);
 
@@ -81,18 +93,21 @@ public class TransferServiceImpl implements TransferService {
         return transferMapper.toAccountStatementDto(transactionPage, accountNumber);
     }
 
-
     private void validateAccountAndDates(String accountNumber, LocalDate from, LocalDate to){
         if(!accountRepository.existsByAccountNo(accountNumber)){
+            log.warn("Счет {} не найден при запросе выписки", accountNumber);
             throw new AccountNotFoundException("Счет не найден");
         }
         if (from.isAfter(to)) {
+            log.warn("Некорректный диапазон дат: from={} > to={}", from, to);
             throw new InvalidDateException("Дата начала не может быть позже даты окончания");
         }
         if (from.isAfter(LocalDate.now()) || to.isAfter(LocalDate.now())) {
+            log.warn("Даты {} - {} находятся в будущем", from, to);
             throw new InvalidDateException("Даты не могут быть в будущем");
         }
         if (from.isBefore(MIN_DATE)) {
+            log.warn("Дата начала {} слишком ранняя", from);
             throw new InvalidDateException("Дата начала слишком ранняя");
         }
     }

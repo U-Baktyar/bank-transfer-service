@@ -8,6 +8,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -16,9 +19,11 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@Validated
 @RequestMapping("/api")
+@Validated
 public class TransferController {
+
+    private static final Logger log = LoggerFactory.getLogger(TransferController.class);
 
     private final TransferService transferService;
 
@@ -28,6 +33,11 @@ public class TransferController {
 
     @PostMapping("/transfers")
     public ResponseEntity<TransferResponseDto> execute(@RequestBody @Valid CreateTransferDto createTransferDto){
+        log.info("Запрос на перевод с счета {} на счет {} сумма {}",
+                createTransferDto.senderAccountNumber(),
+                createTransferDto.receiverAccountNumber(),
+                createTransferDto.amount()
+        );
         return ResponseEntity.ok(transferService.execute(createTransferDto));
     }
 
@@ -38,8 +48,9 @@ public class TransferController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0") @Min(0) Integer page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(50) Integer size
-
     ){
+        log.info("Запрос на получение выписки по счету {} с {} по {}, страница {}, размер {}",
+                accountNumber, from, to, page, size);
         return ResponseEntity.ok(
                 transferService.getAccountStatement(accountNumber, from, to, page, size)
         );

@@ -1,0 +1,41 @@
+version: "3.9"
+services:
+  bank-backend:
+    build: .
+    container_name: bank-backend
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://app-db:5432/bankdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      - app-db
+    networks:
+      - app_net
+
+  app-db:
+    image: postgres:15-alpine
+    container_name: my-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bankdb
+    volumes:
+      - bankdb:/var/lib/postgresql/data
+    networks:
+      - app_net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d bankdb" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  bankdb:
+
+networks:
+  app_net:
+    driver: bridge
