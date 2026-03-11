@@ -6,6 +6,9 @@ import com.aiylbank.backend.entity.AccountStatus;
 import com.aiylbank.backend.entity.Transaction;
 import com.aiylbank.backend.entity.TransactionStatus;
 import com.aiylbank.backend.exception.AccountNotFoundException;
+import com.aiylbank.backend.exception.AccountStatusException;
+import com.aiylbank.backend.exception.NotEnoughMoneyException;
+import com.aiylbank.backend.exception.BusinessException;
 import com.aiylbank.backend.mapper.TransferMapper;
 import com.aiylbank.backend.repository.AccountRepository;
 import com.aiylbank.backend.repository.TransactionRepository;
@@ -40,7 +43,10 @@ public class FundsTransferServiceImpl implements FundsTransferService {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(
+            propagation = Propagation.REQUIRED,
+            noRollbackFor = {AccountStatusException.class, NotEnoughMoneyException.class}
+    )
     public TransferResponseDto transferFunds(String senderAccountNumber,
                                              String receiverAccountNumber,
                                              BigDecimal amount) {
@@ -48,50 +54,51 @@ public class FundsTransferServiceImpl implements FundsTransferService {
         log.info("Начало перевода {} с {} на {}", amount, senderAccountNumber, receiverAccountNumber);
 
         Account sender = accountRepository.findByAccountNo(senderAccountNumber)
-                .orElseThrow(() -> {
-                    log.warn("Счёт отправителя {} не найден", senderAccountNumber);
-                    return new AccountNotFoundException("Счёт отправителя не найден");
-                });
+                .orElseThrow(() -> new AccountNotFoundException("Счёт отправителя не найден"));
 
         Account receiver = accountRepository.findByAccountNo(receiverAccountNumber)
-                .orElseThrow(() -> {
-                    log.warn("Счёт получателя {} не найден", receiverAccountNumber);
-                    return new AccountNotFoundException("Счёт получателя не найден");
-                });
+                .orElseThrow(() -> new AccountNotFoundException("Счёт получателя не найден"));
 
-        TransactionStatus transactionStatus = isTransferAllowed(sender, receiver, amount)
-                ? TransactionStatus.SUCCESS
-                : TransactionStatus.FAILED;
-    
-            log.info("Статус транзакции: {}", transactionStatus);
-    
-            BigDecimal senderBalanceAfter = sender.getBalance();
-            BigDecimal receiverBalanceAfter = receiver.getBalance();
-    
-            if (transactionStatus != TransactionStatus.FAILED){
-                senderBalanceAfter =  senderBalanceAfter.subtract(amount);
-                receiverBalanceAfter =  receiverBalanceAfter.add(amount);
-            }
-    
-            Transaction transaction = transferMapper.toEntity(
-                    sender,
-                    receiver,
-                    transactionStatus,
-                    amount,
-                    senderBalanceAfter,
-                    receiverBalanceAfter
+        if (!isTransferAllowed(sender, receiver, amount)) {
+
+            Transaction failedTransaction = transferMapper.toEntity(
+                    sender, receiver, TransactionStatus.FAILED, amount,
+                    sender.getBalance(), receiver.getBalance()
             );
-    
-            sender.setBalance(senderBalanceAfter);
-            receiver.setBalance(receiverBalanceAfter);
-    
-            transactionRepository.save(transaction);
-    
-            log.info("Транзакция {} завершена. Балансы после: отправитель={}, получатель={}",
-                    transaction.getId(), senderBalanceAfter, receiverBalanceAfter);
-    
-            return transferMapper.toResponseDto(transaction);
+            transactionRepository.save(failedTransaction);
+
+            if (sender.getStatus() != AccountStatus.ACTIVE) {
+                log.warn("Перевод отклонен: счет отправителя {} заблокирован", sender.getAccountNo());
+                throw new AccountStatusException("Счет отправителя заблокирован");
+            }
+            if (receiver.getStatus() != AccountStatus.ACTIVE) {
+                log.warn("Перевод отклонен: счет получателя {} заблокирован", receiver.getAccountNo());
+                throw new AccountStatusException("Счет получателя заблокирован");
+            }
+            if (sender.getBalance().compareTo(amount) < 0) {
+                log.warn("Перевод отклонен: недостаточно средств на счету {}. Баланс: {}, запрашиваемая сумма: {}",
+                        sender.getAccountNo(), sender.getBalance(), amount);
+                throw new NotEnoughMoneyException("Недостаточно денег для перевода");
+            }
+
+            throw new BusinessException("Перевод отклонен по правилам банка");
         }
+
+        BigDecimal senderBalanceAfter = sender.getBalance().subtract(amount);
+        BigDecimal receiverBalanceAfter = receiver.getBalance().add(amount);
+
+        sender.setBalance(senderBalanceAfter);
+        receiver.setBalance(receiverBalanceAfter);
+
+        Transaction successTransaction = transferMapper.toEntity(
+                sender, receiver, TransactionStatus.SUCCESS, amount,
+                senderBalanceAfter, receiverBalanceAfter
+        );
+
+        transactionRepository.save(successTransaction);
+        log.info("Транзакция завершена успешно. ID: {}", successTransaction.getId());
+        return transferMapper.toResponseDto(successTransaction);
+    }
 
     private boolean isTransferAllowed(Account sender, Account receiver, BigDecimal amount) {
         return sender.getStatus() == AccountStatus.ACTIVE &&

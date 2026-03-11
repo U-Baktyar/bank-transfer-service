@@ -3,7 +3,7 @@ spring:
     name: bank-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/bankdb
+    url: jdbc:postgresql://app-db:5432/bankdb
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver

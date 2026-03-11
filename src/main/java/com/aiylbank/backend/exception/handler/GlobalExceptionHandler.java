@@ -1,8 +1,6 @@
 package com.aiylbank.backend.exception.handler;
 
-import com.aiylbank.backend.exception.AccountNotFoundException;
-import com.aiylbank.backend.exception.InvalidDateException;
-import com.aiylbank.backend.exception.SelfTransferException;
+import com.aiylbank.backend.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +33,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(SelfTransferException.class)
     public ProblemDetail handleSelfTransfer(SelfTransferException ex, HttpServletRequest request){
         log.warn("SelfTransferException на {}: {}", request.getRequestURI(), ex.getMessage());
-        return createProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), "Self Transfer Error", request);
+        return createProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), "Self Transfer Error", request);
+    }
+
+    @ExceptionHandler(AccountStatusException.class)
+    public ProblemDetail handleSelfTransfer(AccountStatusException ex, HttpServletRequest request){
+        log.warn("AccountStatusException на {}: {}", request.getRequestURI(), ex.getMessage());
+        return createProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), "Self Transfer Error", request);
+    }
+
+    @ExceptionHandler(NotEnoughMoneyException.class)
+    public ProblemDetail handleSelfTransfer(NotEnoughMoneyException ex, HttpServletRequest request){
+        log.warn("NotEnoughMoneyException на {}: {}", request.getRequestURI(), ex.getMessage());
+        return createProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), "Self Transfer Error", request);
     }
 
     @ExceptionHandler(Exception.class)

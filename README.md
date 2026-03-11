@@ -115,9 +115,19 @@
 
 ### Запуск приложения
 
-Запустите приложение и базу данных PostgreSQL одной командой:  docker compose up 
+1. Клонировать репозиторий
 
-После запуска сервис будет доступен по адресу: http://localhost:8080
+git clone https://github.com/U-Baktyar/bank-transfer-service.git
+
+2. Перейти в папку проекта
+
+cd bank-transfer-service
+
+3. Запустить приложение
+
+docker compose up 
+
+После запуска сервис будет доступен по адресу: http://localhost:8080/api
 
 ---
 
