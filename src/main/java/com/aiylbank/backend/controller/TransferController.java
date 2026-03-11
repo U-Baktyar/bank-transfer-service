@@ -4,6 +4,8 @@ import com.aiylbank.backend.dto.AccountStatementDto;
 import com.aiylbank.backend.dto.CreateTransferDto;
 import com.aiylbank.backend.dto.TransferResponseDto;
 import com.aiylbank.backend.service.TransferService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -21,6 +23,7 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("/api")
 @Validated
+@Tag(name = "Transfers", description = "API для переводов и выписок по счету")
 public class TransferController {
 
     private static final Logger log = LoggerFactory.getLogger(TransferController.class);
@@ -31,6 +34,7 @@ public class TransferController {
         this.transferService = transferService;
     }
 
+    @Operation(summary = "Выполнить перевод между счетами")
     @PostMapping("/transfers")
     public ResponseEntity<TransferResponseDto> execute(@RequestBody @Valid CreateTransferDto createTransferDto){
         log.info("Запрос на перевод с счета {} на счет {} сумма {}",
@@ -41,6 +45,7 @@ public class TransferController {
         return ResponseEntity.ok(transferService.execute(createTransferDto));
     }
 
+    @Operation(summary = "Получить выписку по счету")
     @GetMapping("/accounts/{accountNumber}/statement")
     public ResponseEntity<AccountStatementDto> getAccountStatement(
             @PathVariable("accountNumber") @Size(min = 20, max = 20) String accountNumber,
