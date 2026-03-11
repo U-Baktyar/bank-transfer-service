@@ -110,8 +110,8 @@
 
 ### Требования
 
-- Docker
-- Docker Compose
+* **Docker**: 28.3.1
+* **Docker Compose**: 2.38.1
 
 ### Запуск приложения
 
