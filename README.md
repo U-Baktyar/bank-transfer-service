@@ -104,6 +104,14 @@
   "totalPages": 1
 }
 ```
+
+### 3. Документация по REST API
+
+GET /swagger-ui.html  
+Описание: просмотр всех endpoints, примеров request/response и возможность тестирования API прямо из браузера.
+
+GET /v3/api-docs  
+Описание: машиночитаемый OpenAPI JSON документ.
 ---
 
 ## Установка и запуск
